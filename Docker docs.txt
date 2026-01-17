@@ -1,0 +1,1042 @@
+# Formation Docker Complète : De l'Image au Déploiement
+
+Je vais vous créer un cours détaillé et structuré sur Docker, couvrant tous les aspects essentiels pour maîtriser cette technologie.
+
+## 1. Introduction et Concepts Fondamentaux
+
+### Qu'est-ce que Docker ?
+
+Docker est une plateforme de conteneurisation qui permet d'empaqueter une application avec toutes ses dépendances dans un conteneur isolé. Contrairement aux machines virtuelles, les conteneurs partagent le noyau du système hôte, ce qui les rend beaucoup plus légers et rapides.
+
+**Avantages clés :**
+- Portabilité : "Build once, run anywhere"
+- Isolation : Chaque conteneur est isolé des autres
+- Efficacité : Démarrage en quelques secondes
+- Reproductibilité : Environnements identiques partout
+- Scalabilité : Facilite le déploiement à grande échelle
+
+### Architecture Docker
+
+L'architecture Docker repose sur trois composants principaux :
+
+**Docker Client** : Interface en ligne de commande (CLI) que vous utilisez pour interagir avec Docker. Quand vous tapez `docker run`, c'est le client qui communique avec le daemon.
+
+**Docker Daemon (dockerd)** : Service en arrière-plan qui gère les conteneurs, images, volumes et réseaux. C'est le cœur de Docker qui fait tout le travail.
+
+**Docker Registry** : Dépôt d'images (Docker Hub par défaut) où sont stockées et distribuées les images Docker.
+
+### Images vs Conteneurs
+
+**Image Docker** : Template en lecture seule qui contient tout le nécessaire pour exécuter une application (code, runtime, bibliothèques, variables d'environnement). C'est comme une recette de cuisine.
+
+**Conteneur Docker** : Instance en cours d'exécution d'une image. C'est comme le plat préparé à partir de la recette. Un conteneur peut être démarré, arrêté, supprimé et modifié.
+
+## 2. Les Images Docker
+
+### Structure d'une Image
+
+Les images Docker sont composées de couches (layers) empilées les unes sur les autres. Chaque instruction dans un Dockerfile crée une nouvelle couche. Ce système de couches permet de réutiliser et partager des composants communs entre images, économisant ainsi de l'espace disque.
+
+### Le Dockerfile
+
+Le Dockerfile est un fichier texte contenant les instructions pour construire une image. Voici les instructions essentielles :
+
+**FROM** : Définit l'image de base. Toujours la première instruction. Exemple : `FROM node:18-alpine`
+
+**WORKDIR** : Définit le répertoire de travail dans le conteneur. Tous les chemins relatifs suivants seront basés sur ce répertoire.
+
+**COPY** : Copie des fichiers/dossiers depuis votre machine vers le conteneur. Exemple : `COPY package.json .`
+
+**ADD** : Similaire à COPY mais avec des fonctionnalités supplémentaires (extraction d'archives, téléchargement depuis URL). Privilégiez COPY pour la simplicité.
+
+**RUN** : Exécute une commande pendant la construction de l'image. Chaque RUN crée une nouvelle couche. Exemple : `RUN npm install`
+
+**CMD** : Commande par défaut exécutée au démarrage du conteneur. Il ne peut y avoir qu'un seul CMD (le dernier est utilisé).
+
+**ENTRYPOINT** : Point d'entrée principal du conteneur. À la différence de CMD, il n'est pas remplacé par les arguments en ligne de commande mais les reçoit en paramètres.
+
+**ENV** : Définit des variables d'environnement. Exemple : `ENV NODE_ENV=production`
+
+**EXPOSE** : Documente les ports utilisés par le conteneur (ne publie pas réellement le port).
+
+**ARG** : Variables utilisables uniquement pendant la construction de l'image, contrairement à ENV qui persiste dans le conteneur.
+
+**VOLUME** : Crée un point de montage pour persister les données.
+
+**USER** : Définit l'utilisateur (et groupe) qui exécutera les commandes suivantes.
+
+### Exemple de Dockerfile Basique
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+### Construction et Gestion des Images
+
+**Construire une image :**
+```bash
+docker build -t mon-app:v1.0 .
+docker build -f Dockerfile.dev -t mon-app:dev .
+```
+
+**Lister les images :**
+```bash
+docker images
+docker image ls
+```
+
+**Inspecter une image :**
+```bash
+docker image inspect mon-app:v1.0
+docker history mon-app:v1.0  # Voir les couches
+```
+
+**Supprimer des images :**
+```bash
+docker rmi mon-app:v1.0
+docker image prune  # Supprimer les images non utilisées
+```
+
+**Taguer et pousser vers un registry :**
+```bash
+docker tag mon-app:v1.0 username/mon-app:v1.0
+docker push username/mon-app:v1.0
+docker pull username/mon-app:v1.0
+```
+
+## 3. Les Conteneurs
+
+### Cycle de Vie d'un Conteneur
+
+Un conteneur passe par plusieurs états : créé, en cours d'exécution, en pause, arrêté et supprimé.
+
+**Créer et démarrer un conteneur :**
+```bash
+docker run -d --name mon-conteneur mon-app:v1.0
+docker run -it ubuntu bash  # Mode interactif
+docker create --name mon-conteneur mon-app:v1.0
+docker start mon-conteneur
+```
+
+**Options importantes de `docker run` :**
+- `-d` : Détaché (arrière-plan)
+- `-it` : Interactif avec terminal
+- `--name` : Nom du conteneur
+- `-p` : Publication de ports
+- `-v` : Montage de volumes
+- `--env` ou `-e` : Variables d'environnement
+- `--network` : Réseau à utiliser
+- `--rm` : Suppression automatique à l'arrêt
+
+**Gérer les conteneurs :**
+```bash
+docker ps  # Conteneurs en cours
+docker ps -a  # Tous les conteneurs
+docker stop mon-conteneur
+docker restart mon-conteneur
+docker pause mon-conteneur
+docker unpause mon-conteneur
+docker rm mon-conteneur
+docker rm -f mon-conteneur  # Forcer la suppression
+```
+
+**Interagir avec un conteneur :**
+```bash
+docker exec -it mon-conteneur bash
+docker exec mon-conteneur ls /app
+docker logs mon-conteneur
+docker logs -f mon-conteneur  # Suivre les logs en temps réel
+docker attach mon-conteneur
+docker cp mon-conteneur:/app/file.txt ./local/
+```
+
+**Inspecter un conteneur :**
+```bash
+docker inspect mon-conteneur
+docker stats mon-conteneur  # Utilisation des ressources
+docker top mon-conteneur  # Processus en cours
+```
+
+## 4. Les Volumes Docker
+
+Les volumes sont le mécanisme privilégié pour persister les données générées et utilisées par les conteneurs Docker.
+
+### Types de Stockage
+
+**Volumes** : Gérés par Docker, stockés dans `/var/lib/docker/volumes/`. C'est la méthode recommandée pour la persistance.
+
+**Bind Mounts** : Lient un fichier/dossier de l'hôte vers le conteneur. Utiles pour le développement.
+
+**tmpfs Mounts** : Stockés en mémoire, disparaissent à l'arrêt du conteneur. Utiles pour les données temporaires sensibles.
+
+### Gestion des Volumes
+
+**Créer et gérer des volumes :**
+```bash
+docker volume create mon-volume
+docker volume ls
+docker volume inspect mon-volume
+docker volume rm mon-volume
+docker volume prune  # Supprimer les volumes non utilisés
+```
+
+**Utiliser des volumes :**
+```bash
+# Volume nommé
+docker run -d -v mon-volume:/app/data mon-app
+
+# Bind mount
+docker run -d -v /chemin/hote:/app/data mon-app
+docker run -d -v $(pwd):/app mon-app  # Répertoire courant
+
+# Volume anonyme
+docker run -d -v /app/data mon-app
+
+# Lecture seule
+docker run -d -v mon-volume:/app/data:ro mon-app
+```
+
+**Dans un Dockerfile :**
+```dockerfile
+VOLUME /app/data
+```
+
+### Cas d'Usage Pratiques
+
+**Base de données :** Persister les données PostgreSQL, MongoDB, etc.
+```bash
+docker run -d -v postgres-data:/var/lib/postgresql/data postgres:15
+```
+
+**Développement :** Synchroniser le code source pour le hot-reload
+```bash
+docker run -d -v $(pwd):/app -v /app/node_modules mon-app
+```
+
+**Partage entre conteneurs :** Utiliser `--volumes-from`
+```bash
+docker run -d --name data-container -v shared-data:/data busybox
+docker run -d --volumes-from data-container mon-app
+```
+
+## 5. Les Réseaux Docker
+
+Les réseaux Docker permettent aux conteneurs de communiquer entre eux et avec l'extérieur de manière isolée et sécurisée.
+
+### Types de Réseaux
+
+**Bridge** : Réseau par défaut, utilisé pour la communication entre conteneurs sur le même hôte.
+
+**Host** : Le conteneur partage le réseau de l'hôte, sans isolation réseau.
+
+**None** : Aucun réseau, le conteneur est complètement isolé.
+
+**Overlay** : Pour la communication entre conteneurs sur différents hôtes Docker (Docker Swarm, Kubernetes).
+
+**Macvlan** : Assigne une adresse MAC au conteneur, le faisant apparaître comme un périphérique physique sur le réseau.
+
+### Gestion des Réseaux
+
+**Créer et gérer des réseaux :**
+```bash
+docker network create mon-reseau
+docker network create --driver bridge mon-reseau-bridge
+docker network ls
+docker network inspect mon-reseau
+docker network rm mon-reseau
+docker network prune
+```
+
+**Connecter des conteneurs :**
+```bash
+docker run -d --name web --network mon-reseau nginx
+docker run -d --name db --network mon-reseau postgres
+
+# Connecter/déconnecter un conteneur existant
+docker network connect mon-reseau mon-conteneur
+docker network disconnect mon-reseau mon-conteneur
+```
+
+### Publication de Ports
+
+**Mapper des ports :**
+```bash
+# Format : -p [IP-hote:]port-hote:port-conteneur
+docker run -d -p 8080:80 nginx  # localhost:8080 -> conteneur:80
+docker run -d -p 127.0.0.1:8080:80 nginx  # Uniquement local
+docker run -d -p 3306:3306 -p 8080:80 mon-app  # Multiples ports
+docker run -d -P nginx  # Ports aléatoires pour tous les EXPOSE
+```
+
+### Communication entre Conteneurs
+
+Sur le même réseau, les conteneurs peuvent communiquer en utilisant leurs noms comme noms d'hôte :
+
+```bash
+docker network create app-network
+docker run -d --name database --network app-network postgres
+docker run -d --name backend --network app-network \
+  -e DB_HOST=database mon-backend
+```
+
+Dans le backend, vous pouvez vous connecter à `database:5432` directement.
+
+### Exemple Pratique : Application Multi-Conteneurs
+
+```bash
+# Créer le réseau
+docker network create app-net
+
+# Base de données
+docker run -d --name postgres \
+  --network app-net \
+  -v pgdata:/var/lib/postgresql/data \
+  -e POSTGRES_PASSWORD=secret \
+  postgres:15
+
+# Backend API
+docker run -d --name api \
+  --network app-net \
+  -e DATABASE_URL=postgres://postgres:secret@postgres:5432/mydb \
+  mon-api:latest
+
+# Frontend
+docker run -d --name frontend \
+  --network app-net \
+  -p 3000:3000 \
+  -e API_URL=http://api:8000 \
+  mon-frontend:latest
+
+# Reverse proxy
+docker run -d --name nginx \
+  --network app-net \
+  -p 80:80 \
+  -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf:ro \
+  nginx:alpine
+```
+
+## 6. Les Variables d'Environnement
+
+Les variables d'environnement sont essentielles pour configurer vos applications de manière flexible et sécurisée.
+
+### Définir des Variables d'Environnement
+
+**En ligne de commande :**
+```bash
+docker run -e NODE_ENV=production -e PORT=3000 mon-app
+docker run -e "CONNECTION_STRING=Server=db;Port=5432" mon-app
+```
+
+**Depuis un fichier :**
+```bash
+# fichier .env
+NODE_ENV=production
+DATABASE_URL=postgres://user:pass@db:5432/mydb
+REDIS_HOST=redis
+PORT=3000
+
+docker run --env-file .env mon-app
+```
+
+**Dans le Dockerfile :**
+```dockerfile
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV PATH="/app/bin:${PATH}"
+```
+
+### Bonnes Pratiques
+
+**Ne jamais hardcoder les secrets :** Utilisez des variables d'environnement ou des systèmes de gestion de secrets (Docker Secrets, Vault, etc.).
+
+**Valeurs par défaut :** Définissez des valeurs par défaut sensées dans votre application, mais permettez leur remplacement via ENV.
+
+**Hiérarchie :** Les variables passées avec `-e` ou `--env-file` lors du `docker run` écrasent celles définies dans le Dockerfile.
+
+**Variables spéciales :** Certaines variables comme `HOME`, `PATH`, `HOSTNAME` sont automatiquement définies par Docker.
+
+### Inspection des Variables
+
+```bash
+docker inspect mon-conteneur | grep -A 20 Env
+docker exec mon-conteneur env
+```
+
+## 7. Multi-Stage Builds
+
+Les builds multi-étapes permettent d'optimiser drastiquement la taille des images en séparant l'environnement de build de l'environnement d'exécution.
+
+### Concept et Avantages
+
+Au lieu d'avoir tous les outils de compilation dans l'image finale, vous les utilisez dans une première étape, puis copiez uniquement les artéfacts nécessaires dans une image finale minimale.
+
+**Avantages :**
+- Réduction significative de la taille des images (parfois de plusieurs Go à quelques Mo)
+- Sécurité accrue : moins de surface d'attaque
+- Images finales plus propres : seulement le runtime nécessaire
+- Simplification du processus : un seul Dockerfile au lieu de scripts complexes
+
+### Exemple Node.js
+
+```dockerfile
+# Étape 1 : Build
+FROM node:18 AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Étape 2 : Production
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --only=production
+COPY --from=builder /app/dist ./dist
+USER node
+CMD ["node", "dist/server.js"]
+```
+
+### Exemple Go
+
+```dockerfile
+# Build stage
+FROM golang:1.21 AS builder
+WORKDIR /app
+COPY go.* ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o main .
+
+# Production stage
+FROM alpine:3.19
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY --from=builder /app/main .
+CMD ["./main"]
+```
+
+### Exemple Python
+
+```dockerfile
+# Build stage
+FROM python:3.11 AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# Production stage
+FROM python:3.11-slim
+WORKDIR /app
+COPY --from=builder /root/.local /root/.local
+COPY . .
+ENV PATH=/root/.local/bin:$PATH
+CMD ["python", "app.py"]
+```
+
+### Techniques Avancées
+
+**Utiliser plusieurs stages pour différentes cibles :**
+```dockerfile
+FROM node:18 AS base
+WORKDIR /app
+COPY package*.json ./
+
+FROM base AS development
+RUN npm install
+COPY . .
+CMD ["npm", "run", "dev"]
+
+FROM base AS builder
+RUN npm install
+COPY . .
+RUN npm run build
+
+FROM node:18-alpine AS production
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+CMD ["node", "dist/server.js"]
+```
+
+**Builder avec des dépendances externes :**
+```dockerfile
+FROM node:18 AS dependencies
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+
+FROM dependencies AS builder
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=builder /app/build /usr/share/nginx/html
+```
+
+## 8. Optimisation des Images Docker
+
+L'optimisation des images est cruciale pour réduire les temps de build, de déploiement et améliorer la sécurité.
+
+### Choisir la Bonne Image de Base
+
+**Utilisez des variantes Alpine :** Les images basées sur Alpine Linux sont beaucoup plus petites (5-10 Mo vs 100-200 Mo).
+
+```dockerfile
+# ❌ Lourd : ~900 MB
+FROM node:18
+
+# ✅ Léger : ~170 MB
+FROM node:18-alpine
+
+# ✅ Encore plus léger : ~120 MB
+FROM node:18-alpine3.19
+```
+
+**Considérez distroless :** Pour une sécurité maximale, les images distroless de Google ne contiennent que le runtime, sans shell ni outils.
+
+```dockerfile
+FROM golang:1.21 AS builder
+# ... build ...
+
+FROM gcr.io/distroless/static-debian12
+COPY --from=builder /app/main /
+CMD ["/main"]
+```
+
+### Optimiser les Couches
+
+**Combinez les commandes RUN :**
+
+```dockerfile
+# ❌ Mauvais : 3 couches
+RUN apt-get update
+RUN apt-get install -y curl
+RUN apt-get clean
+
+# ✅ Bon : 1 couche
+RUN apt-get update && \
+    apt-get install -y curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+```
+
+**Ordonnez les instructions par fréquence de changement :** Les couches qui changent rarement doivent être en premier pour maximiser le cache.
+
+```dockerfile
+# ✅ Bon ordre
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./    # Change rarement
+RUN npm install          # Utilise le cache si package.json n'a pas changé
+COPY . .                 # Change fréquemment
+RUN npm run build
+```
+
+### Utiliser .dockerignore
+
+Le fichier `.dockerignore` fonctionne comme `.gitignore` et exclut des fichiers du contexte de build.
+
+```
+# .dockerignore
+node_modules
+npm-debug.log
+.git
+.env
+.DS_Store
+*.md
+tests
+coverage
+.github
+Dockerfile*
+docker-compose*.yml
+```
+
+**Avantages :** Contexte de build plus petit, builds plus rapides, images plus légères.
+
+### Minimiser les Dépendances
+
+**Installation ciblée :**
+```dockerfile
+# ❌ Installe tout
+RUN npm install
+
+# ✅ Seulement les dépendances de production
+RUN npm install --only=production
+
+# ✅ Installation sans cache
+RUN npm ci --only=production --no-audit --no-fund
+```
+
+**Nettoyage après installation :**
+```dockerfile
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential && \
+    npm install && \
+    apt-get remove -y build-essential && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+```
+
+### Utiliser BuildKit
+
+BuildKit est le nouveau moteur de build Docker qui apporte de nombreuses optimisations.
+
+**Activer BuildKit :**
+```bash
+export DOCKER_BUILDKIT=1
+docker build -t mon-app .
+
+# Ou de manière permanente dans daemon.json
+{
+  "features": {
+    "buildkit": true
+  }
+}
+```
+
+**Fonctionnalités BuildKit :**
+
+```dockerfile
+# syntax=docker/dockerfile:1.4
+
+# Cache de montage pour npm
+RUN --mount=type=cache,target=/root/.npm \
+    npm install
+
+# Montage de secrets
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
+    npm install
+
+# Montage SSH
+RUN --mount=type=ssh \
+    git clone git@github.com:user/private-repo.git
+```
+
+### Sécurité et Meilleures Pratiques
+
+**Utiliser un utilisateur non-root :**
+```dockerfile
+FROM node:18-alpine
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+WORKDIR /app
+COPY --chown=appuser:appgroup . .
+USER appuser
+CMD ["node", "server.js"]
+```
+
+**Scanner les vulnérabilités :**
+```bash
+docker scan mon-app:latest
+docker scout quickview mon-app:latest
+```
+
+**Définir des métadonnées :**
+```dockerfile
+LABEL maintainer="votre@email.com"
+LABEL version="1.0"
+LABEL description="Mon application"
+```
+
+### Exemple Complet Optimisé
+
+```dockerfile
+# syntax=docker/dockerfile:1.4
+FROM node:18-alpine AS base
+RUN apk add --no-cache dumb-init
+WORKDIR /app
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+FROM base AS dependencies
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production
+
+FROM base AS build
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
+COPY . .
+RUN npm run build
+
+FROM base AS production
+ENV NODE_ENV=production
+COPY --from=dependencies --chown=appuser:appgroup /app/node_modules ./node_modules
+COPY --from=build --chown=appuser:appgroup /app/dist ./dist
+COPY --chown=appuser:appgroup package.json ./
+USER appuser
+EXPOSE 3000
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/server.js"]
+```
+
+## 9. Docker Compose
+
+Docker Compose permet de définir et gérer des applications multi-conteneurs via un fichier YAML.
+
+### Structure d'un docker-compose.yml
+
+```yaml
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: my-postgres
+    environment:
+      POSTGRES_DB: myapp
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - backend
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: my-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    networks:
+      - backend
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: my-backend
+    environment:
+      DATABASE_URL: postgres://admin:secret@database:5432/myapp
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+    env_file:
+      - ./backend/.env
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - backend
+      - frontend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/logs:/app/logs
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: my-frontend
+    environment:
+      API_URL: http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - frontend
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: my-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+```
+
+### Commandes Docker Compose
+
+```bash
+# Démarrer tous les services
+docker compose up
+docker compose up -d  # En arrière-plan
+docker compose up --build  # Rebuild avant de démarrer
+
+# Démarrer des services spécifiques
+docker compose up database redis
+
+# Arrêter les services
+docker compose stop
+docker compose down  # Arrête et supprime les conteneurs
+docker compose down -v  # Supprime aussi les volumes
+
+# Reconstruire les images
+docker compose build
+docker compose build --no-cache backend
+
+# Voir les logs
+docker compose logs
+docker compose logs -f backend  # Suivre les logs
+docker compose logs --tail=100 backend
+
+# Gérer les services
+docker compose ps
+docker compose restart backend
+docker compose pause database
+docker compose unpause database
+
+# Exécuter des commandes
+docker compose exec backend bash
+docker compose exec database psql -U admin myapp
+docker compose run --rm backend npm test
+
+# Scaling
+docker compose up -d --scale backend=3
+```
+
+### Profiles et Environnements
+
+**Utiliser des profiles :**
+```yaml
+services:
+  database:
+    image: postgres:15-alpine
+    # Toujours démarré
+
+  backend:
+    build: ./backend
+    profiles: ["app"]
+    # Démarré seulement avec --profile app
+
+  debug-tools:
+    image: nicolaka/netshoot
+    profiles: ["debug"]
+    # Démarré seulement avec --profile debug
+```
+
+```bash
+docker compose --profile app up
+docker compose --profile app --profile debug up
+```
+
+**Multiples fichiers compose :**
+```bash
+# Base
+docker compose -f docker-compose.yml up
+
+# Development
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+# Production
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+```
+
+## 10. Déploiement en Production
+
+### Préparation au Déploiement
+
+**Build pour production :**
+```bash
+docker build --target production -t mon-app:1.0.0 .
+docker tag mon-app:1.0.0 mon-app:latest
+```
+
+**Push vers un registry :**
+```bash
+# Docker Hub
+docker login
+docker push username/mon-app:1.0.0
+docker push username/mon-app:latest
+
+# Registry privé
+docker tag mon-app:1.0.0 registry.example.com/mon-app:1.0.0
+docker push registry.example.com/mon-app:1.0.0
+
+# AWS ECR
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin 123456789.dkr.ecr.us-east-1.amazonaws.com
+docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/mon-app:1.0.0
+```
+
+### Stratégies de Déploiement
+
+**Rolling update :** Mise à jour progressive des conteneurs un par un.
+
+**Blue-Green :** Deux environnements complets, basculement instantané.
+
+**Canary :** Déploiement progressif avec monitoring avant déploiement complet.
+
+### Health Checks et Monitoring
+
+**Health check dans Dockerfile :**
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+```
+
+**Health check dans docker-compose.yml :**
+```yaml
+services:
+  backend:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+**Monitoring avec Prometheus :**
+```yaml
+services:
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=secret
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+```
+
+### Sécurité en Production
+
+**Limiter les ressources :**
+```yaml
+services:
+  backend:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+```
+
+**Utiliser des secrets Docker :**
+```yaml
+services:
+  backend:
+    secrets:
+      - db_password
+      - api_key
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  api_key:
+    external: true
+```
+
+**Politiques de restart :**
+```yaml
+services:
+  backend:
+    restart: unless-stopped  # Production
+    # Options: no, always, on-failure, unless-stopped
+```
+
+### Logging
+
+**Configuration des logs :**
+```yaml
+services:
+  backend:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+```
+
+**Centralisation des logs :**
+```yaml
+services:
+  app:
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://logs.example.com:514"
+
+  # Ou avec ELK Stack
+  elasticsearch:
+    image: elasticsearch:8.11.0
+  
+  logstash:
+    image: logstash:8.11.0
+    depends_on:
+      - elasticsearch
+  
+  kibana:
+    image: kibana:8.11.0
+    depends_on:
+      - elasticsearch
+```
+
+### Backup et Restoration
+
+**Backup des volumes :**
+```bash
+# Backup
+docker run --rm -v mon-volume:/data -v $(pwd):/backup alpine \
+  tar czf /backup/backup.tar.gz -C /data .
+
+# Restore
+docker run --rm -v mon-volume:/data -v $(pwd):/backup alpine \
+  tar xzf /backup/backup.tar.gz -C /data
+```
+
+### Orchestration pour la Production
+
+Pour des déploiements à grande échelle, considérez des orchestrateurs comme Docker Swarm, Kubernetes ou des services managés (ECS, GKE, AKS).
+
+## Conclusion
+
+Cette formation couvre les aspects essentiels de Docker, de la création d'images optimisées au déploiement en production. Les concepts clés à retenir sont l'importance de l'optimisation des images, l'utilisation appropriée des volumes et réseaux, et les bonnes pratiques de sécurité.
+
+Pour approfondir vos connaissances, pratiquez régulièrement avec des projets réels, explorez la documentation officielle Docker, et n'hésitez pas à expérimenter avec des architectures multi-conteneurs complexes.
